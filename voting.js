@@ -184,6 +184,101 @@ module.exports = function registerVoting(app, { db, admin }) {
         }
     });
 
+    // ── Admin: edit and delete polls ─────────────────────────────────────────
+    const tallyTotal = (tally) => Object.values(tally || {}).reduce((a, b) => a + b, 0);
+
+    function parseOptions(options) {
+        if (!Array.isArray(options) || options.length < 2 || options.length > 20) {
+            throw new Error('Add between 2 and 20 options.');
+        }
+        const clean = options.map((o, i) => ({
+            id: i + 1,
+            name: String((o && o.name) || '').trim(),
+            position: String((o && o.position) || '').trim(),
+            county: String((o && o.county) || '').trim()
+        }));
+        if (clean.some(o => !o.name)) throw new Error('Every option needs a name.');
+        return clean;
+    }
+
+    // Deletes all payment records for a poll, in chunks (Firestore batches hold 500 writes max)
+    async function deletePaymentsFor(pollId) {
+        for (;;) {
+            const snap = await votePaymentsCol.where('pollId', '==', pollId).limit(400).get();
+            if (snap.empty) break;
+            const batch = db.batch();
+            snap.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+        }
+    }
+
+    app.put('/api/admin/polls/:id', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
+        try {
+            const ref = pollsCol.doc(req.params.id);
+            const snap = await ref.get();
+            if (!snap.exists) return res.status(404).json({ error: 'Poll not found.' });
+            const poll = snap.data();
+            const { title, description, options, closesAt } = req.body || {};
+            const updates = {};
+
+            if (title !== undefined) {
+                if (!String(title).trim()) return res.status(400).json({ error: 'Title cannot be empty.' });
+                updates.title = String(title).trim();
+            }
+            if (description !== undefined) updates.description = String(description).trim();
+            if (closesAt !== undefined) {
+                const ms = Date.parse(closesAt);
+                if (isNaN(ms)) return res.status(400).json({ error: 'Invalid closing date.' });
+                updates.closesAt = ms;
+            }
+            if (options !== undefined) {
+                if (tallyTotal(poll.tally) > 0) {
+                    return res.status(409).json({
+                        error: 'Options cannot be changed once votes are paid. You can still edit the title, description and closing time.'
+                    });
+                }
+                const clean = parseOptions(options);
+                const tally = {};
+                clean.forEach(o => { tally[o.id] = 0; });
+                updates.options = clean;
+                updates.tally = tally;
+            }
+
+            if (!Object.keys(updates).length) return res.status(400).json({ error: 'Nothing to update.' });
+            await ref.update(updates);
+            res.json({ success: true });
+        } catch (err) {
+            if (err.message && /options|name/i.test(err.message)) return res.status(400).json({ error: err.message });
+            console.error('Edit poll error:', err);
+            res.status(500).json({ error: 'Could not update poll.' });
+        }
+    });
+
+    app.delete('/api/admin/polls/:id', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
+        try {
+            const ref = pollsCol.doc(req.params.id);
+            const snap = await ref.get();
+            if (!snap.exists) return res.status(404).json({ error: 'Poll not found.' });
+            const votes = tallyTotal(snap.data().tally);
+            // Polls with paid votes need an explicit confirmation (?force=true) before deletion
+            if (votes > 0 && req.query.force !== 'true') {
+                return res.status(409).json({
+                    error: `This poll has ${votes} paid vote(s). Deleting it permanently removes them. Confirm to continue.`,
+                    votes,
+                    needsConfirmation: true
+                });
+            }
+            await deletePaymentsFor(req.params.id);
+            await ref.delete();
+            res.json({ success: true });
+        } catch (err) {
+            console.error('Delete poll error:', err);
+            res.status(500).json({ error: 'Could not delete poll.' });
+        }
+    });
+
     // ── Public: view a poll, vote, check payment, see results ────────────────
     app.get('/api/polls/:id', async (req, res) => {
         try {
