@@ -1,0 +1,16 @@
+{
+  "name": "awards-voting",
+  "version": "1.0.0",
+  "description": "Outstanding Headteacher & Principal Awards 2026 - paid public voting (KSh 15 per vote)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "firebase-admin": "^12.7.0"
+  }
+}
