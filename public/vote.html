@@ -4,148 +4,380 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vote | Outstanding Headteacher &amp; Principal Awards 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg1: #071a12;
+    --bg2: #0d2b1e;
+    --card: rgba(255, 255, 255, 0.055);
+    --line: rgba(255, 255, 255, 0.1);
+    --gold: #e9b949;
+    --gold2: #f6d675;
+    --green: #2fbf71;
+    --text: #f2f7f4;
+    --muted: #9fb8ab;
+    --red: #ff8a8a;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, 'Segoe UI', Arial, sans-serif; background: #f4faf7; color: #111918; min-height: 100vh; padding: 24px 16px 60px; }
-  .wrap { max-width: 560px; margin: 0 auto; }
-  .brand { font-weight: 700; color: #0f6e3f; font-size: 18px; margin-bottom: 20px; }
-  .card { background: #fff; border: 1px solid #e2ede7; border-radius: 16px; padding: 22px; margin-bottom: 16px; }
-  h1 { font-size: 22px; line-height: 1.3; margin-bottom: 8px; }
-  .muted { color: #5a6e64; font-size: 14px; line-height: 1.5; }
-  .opt { display: flex; align-items: center; gap: 12px; border: 1.5px solid #e2ede7; border-radius: 12px; padding: 14px; margin-top: 10px; cursor: pointer; }
-  .opt input { accent-color: #0f6e3f; width: 18px; height: 18px; }
-  .opt.sel { border-color: #0f6e3f; background: #e6f9f0; }
-  .opt .name { font-weight: 600; font-size: 15px; }
-  .opt .meta { font-size: 13px; color: #5a6e64; }
-  label { display: block; font-size: 12px; font-weight: 600; color: #5a6e64; text-transform: uppercase; letter-spacing: .05em; margin: 18px 0 6px; }
-  input[type=tel] { width: 100%; padding: 12px 14px; border: 1.5px solid #e2ede7; border-radius: 10px; font-size: 15px; }
-  button { width: 100%; margin-top: 18px; padding: 14px; border: none; border-radius: 10px; background: linear-gradient(135deg,#0f6e3f,#2a9d6e); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
-  button:disabled { opacity: .6; cursor: default; }
-  .msg { font-size: 14px; margin-top: 12px; min-height: 18px; }
-  .err { color: #c62828; }
-  .ok { color: #0f6e3f; font-weight: 600; }
-  .results .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2ede7; font-size: 15px; }
-  .results .row:last-child { border-bottom: none; }
-  .badge { display: inline-block; background: #e6f9f0; color: #0f6e3f; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; margin-bottom: 10px; }
-  .hidden { display: none; }
+  [hidden], .hidden { display: none !important; }
+  body {
+    font-family: 'Inter', -apple-system, 'Segoe UI', Arial, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    padding: 28px 16px 80px;
+    background:
+      radial-gradient(1000px 520px at 50% -12%, #1f6a46 0%, transparent 62%),
+      linear-gradient(180deg, var(--bg2), var(--bg1));
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  .topbar { text-align: center; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 14px 6px 24px; }
+  .kicker {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--gold); border: 1px solid rgba(233, 185, 73, .45); padding: 6px 12px; border-radius: 99px;
+  }
+  .hero h1 { font-size: 26px; line-height: 1.2; font-weight: 800; margin: 16px 0 10px; }
+  .hero p { color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+  .meta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .chip { background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 8px 14px; font-size: 13px; }
+  .chip b { color: var(--gold); font-weight: 700; }
+  .closes { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+
+  /* Banner */
+  .banner {
+    display: none; margin-bottom: 16px; padding: 14px 16px; border-radius: 14px; text-align: center;
+    background: rgba(47, 191, 113, .12); border: 1px solid rgba(47, 191, 113, .45); color: #bff2d4; font-weight: 600;
+    animation: rise .4s ease;
+  }
+  .banner.show { display: block; }
+
+  /* Nominees */
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
+    transition: border-color .3s ease, box-shadow .3s ease, background .3s ease;
+  }
+  .option:hover { border-color: rgba(233, 185, 73, .35); }
+  .option.open {
+    border-color: var(--gold); background: rgba(233, 185, 73, .07);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .35), 0 0 0 1px rgba(233, 185, 73, .2) inset;
+  }
+  .opt-head {
+    all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 14px;
+    padding: 16px; cursor: pointer;
+  }
+  .opt-head:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 18px; }
+  .avatar {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--gold), var(--gold2)); color: #1b1200;
+    font-weight: 800; font-size: 14px; letter-spacing: .03em;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .3s ease;
+  }
+  .option.open .avatar { transform: scale(1.06); }
+  .opt-text { flex: 1; min-width: 0; }
+  .opt-name { font-weight: 700; font-size: 15.5px; line-height: 1.3; }
+  .opt-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; text-transform: capitalize; }
+  .ring {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, .3); display: flex; align-items: center; justify-content: center;
+    transition: border-color .25s ease;
+  }
+  .ring::after {
+    content: ''; width: 11px; height: 11px; border-radius: 50%; background: var(--gold);
+    transform: scale(0); transition: transform .25s ease;
+  }
+  .option.open .ring { border-color: var(--gold); }
+  .option.open .ring::after { transform: scale(1); }
+
+  /* Expanding panel: slides open directly under the chosen nominee */
+  .panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s ease; }
+  .option.open .panel { grid-template-rows: 1fr; }
+  .panel-inner { overflow: hidden; padding: 0 16px; transition: padding .35s ease; }
+  .option.open .panel-inner { padding: 0 16px 18px; }
+  .field-label {
+    display: block; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); margin: 4px 0 8px;
+  }
+  .phone {
+    width: 100%; padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line);
+    background: rgba(0, 0, 0, .28); color: var(--text); font-size: 16px; font-family: inherit; outline: none;
+    transition: border-color .2s ease;
+  }
+  .phone::placeholder { color: #6f8a7e; }
+  .phone:focus { border-color: var(--gold); }
+  .pay-btn {
+    width: 100%; margin-top: 12px; padding: 14px; border: none; border-radius: 12px; cursor: pointer;
+    background: linear-gradient(135deg, var(--gold), var(--gold2)); color: #1b1200;
+    font-weight: 800; font-size: 15px; font-family: inherit;
+    box-shadow: 0 8px 22px rgba(233, 185, 73, .28); transition: transform .15s ease, opacity .2s ease;
+  }
+  .pay-btn:active { transform: scale(.98); }
+  .pay-btn:disabled { opacity: .6; cursor: default; }
+  .inline-msg { font-size: 13.5px; margin-top: 10px; min-height: 18px; color: var(--muted); line-height: 1.5; }
+  .inline-msg.err { color: var(--red); }
+  .inline-msg.ok { color: var(--green); font-weight: 600; }
+
+  .foot { text-align: center; font-size: 12px; color: var(--muted); margin-top: 22px; line-height: 1.6; }
+
+  /* Cards for loading, results and closed states */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 24px; animation: rise .4s ease; }
+  .card h2 { font-size: 22px; font-weight: 800; line-height: 1.25; margin-bottom: 8px; }
+  .card .muted { color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+  .results-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+  .result-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 15px;
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-row strong { color: var(--gold); font-size: 16px; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="brand">Outstanding Headteacher &amp; Principal Awards 2026</div>
+  <div class="topbar">Awards 2026</div>
 
   <div id="loading" class="card muted">Loading poll…</div>
 
   <div id="notFound" class="card hidden">
-    <h1>Poll not found</h1>
+    <h2>Poll not found</h2>
     <p class="muted">Check the link you were sent.</p>
   </div>
 
-  <div id="voting" class="hidden">
-    <div class="card">
-      <span class="badge" id="priceBadge">Each vote costs KSh 15</span>
+  <section id="voting" class="hidden">
+    <header class="hero">
+      <span class="kicker">Public Vote</span>
       <h1 id="title"></h1>
-      <p class="muted" id="desc"></p>
-      <p class="muted" id="closes" style="margin-top:10px"></p>
-    </div>
+      <p id="desc"></p>
+      <div class="meta">
+        <span class="chip"><b id="price"></b> per vote</span>
+        <span class="chip" id="countdown"></span>
+      </div>
+      <p class="closes" id="closes"></p>
+    </header>
 
-    <div class="card">
-      <div id="options"></div>
+    <div id="banner" class="banner"></div>
+    <div id="options" class="options"></div>
 
-      <label for="phone">M-Pesa number</label>
-      <input type="tel" id="phone" placeholder="0712345678" inputmode="tel" autocomplete="tel">
+    <p class="foot">Secure M-Pesa payment. Each confirmed payment adds one vote. Results are published after voting closes.</p>
+  </section>
 
-      <button id="payBtn" disabled>Pay KSh 15 &amp; vote</button>
-      <div id="msg" class="msg"></div>
-    </div>
-  </div>
-
-  <div id="results" class="card results hidden">
-    <h1 id="resultsTitle"></h1>
-    <p class="muted" style="margin-bottom:12px">Results</p>
-    <div id="resultRows"></div>
+  <div id="results" class="card hidden">
+    <div class="kicker" style="margin-bottom:14px">Final results</div>
+    <div class="results-title" id="resultsTitle"></div>
+    <div id="resultRows" style="margin-top:12px"></div>
   </div>
 
   <div id="closedNotice" class="card hidden">
-    <h1>Voting is closed</h1>
+    <h2>Voting is closed</h2>
     <p class="muted" id="closedText"></p>
   </div>
 </div>
 
 <script>
 (function () {
+  var PAY_LABEL = 'Pay KSh 15 & vote';
   var pollId = new URLSearchParams(location.search).get('id');
   var poll = null;
-  var selected = null;
-  var polling = false;
+  var timers = [];
 
   function $(id) { return document.getElementById(id); }
   function show(id, on) { $(id).classList.toggle('hidden', !on); }
-  function setMsg(text, cls) { var m = $('msg'); m.textContent = text; m.className = 'msg ' + (cls || ''); }
-  function fmt(ms) {
-    return new Date(ms).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short' });
-  }
+  function enc(s) { return encodeURIComponent(s); }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
   }
-
+  function fmt(ms) {
+    return new Date(ms).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short' });
+  }
   function getJSON(url, opts) {
     return fetch(url, opts).then(function (r) {
       return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; });
     });
   }
+  function initials(name) {
+    var words = String(name).split(/\s+/).filter(function (w) { return w && w.indexOf('.') === -1; });
+    var s = words.slice(0, 2).map(function (w) { return w.charAt(0).toUpperCase(); }).join('');
+    return s || '?';
+  }
+  function countdownText(ms) {
+    var d = ms - Date.now();
+    if (d <= 0) return 'Voting closed';
+    var days = Math.floor(d / 864e5);
+    var hrs = Math.floor((d % 864e5) / 36e5);
+    var mins = Math.floor((d % 36e5) / 6e4);
+    return days + 'd ' + hrs + 'h ' + mins + 'm left';
+  }
 
-  function renderOptions() {
-    var box = $('options');
-    box.innerHTML = '';
-    poll.options.forEach(function (o) {
-      var row = el('label', 'opt');
-      var radio = el('input');
-      radio.type = 'radio';
-      radio.name = 'option';
-      radio.value = o.id;
-      radio.addEventListener('change', function () {
-        selected = o.id;
-        document.querySelectorAll('.opt').forEach(function (x) { x.classList.remove('sel'); });
-        row.classList.add('sel');
-        $('payBtn').disabled = false;
-      });
-      var text = el('div');
-      text.appendChild(el('div', 'name', o.name));
-      var meta = [o.position, o.county].filter(Boolean).join(' · ');
-      if (meta) text.appendChild(el('div', 'meta', meta));
-      row.appendChild(radio);
-      row.appendChild(text);
-      box.appendChild(row);
+  function setBanner(text) {
+    var b = $('banner');
+    b.textContent = text;
+    b.classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function closeAll(except) {
+    document.querySelectorAll('.option.open').forEach(function (x) {
+      if (x !== except) x.classList.remove('open');
     });
   }
 
-  function loadPoll() {
-    if (!pollId) { show('loading', false); show('notFound', true); return; }
-    getJSON('/api/polls/' + encodeURIComponent(pollId)).then(function (r) {
-      show('loading', false);
-      if (!r.ok) { show('notFound', true); return; }
-      poll = r.data;
-      if (!poll.open) return showResults();
-      $('title').textContent = poll.title;
-      $('desc').textContent = poll.description || '';
-      $('closes').textContent = 'Voting closes ' + fmt(poll.closesAt) + ' (Nairobi time)';
-      renderOptions();
-      show('voting', true);
-    }).catch(function () { show('loading', false); setMsg('Could not load poll.', 'err'); });
+  function toggle(wrap) {
+    var wasOpen = wrap.classList.contains('open');
+    closeAll(wrap);
+    if (wasOpen) { wrap.classList.remove('open'); return; }
+    wrap.classList.add('open');
+    setTimeout(function () {
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      var phone = wrap.querySelector('.phone');
+      if (phone) phone.focus({ preventScroll: true });
+    }, 330);
+  }
+
+  function setInline(msg, text, cls) {
+    msg.textContent = text || '';
+    msg.className = 'inline-msg' + (cls ? ' ' + cls : '');
+  }
+
+  function buildOption(o) {
+    var wrap = el('div', 'option');
+
+    var head = el('button', 'opt-head');
+    head.type = 'button';
+    head.appendChild(el('div', 'avatar', initials(o.name)));
+    var text = el('div', 'opt-text');
+    text.appendChild(el('div', 'opt-name', o.name));
+    var meta = [o.position, o.county].filter(Boolean).join(' · ');
+    if (meta) text.appendChild(el('div', 'opt-meta', meta));
+    head.appendChild(text);
+    head.appendChild(el('div', 'ring'));
+
+    var panel = el('div', 'panel');
+    var inner = el('div', 'panel-inner');
+    inner.appendChild(el('label', 'field-label', 'M-Pesa number'));
+    var phone = el('input', 'phone');
+    phone.type = 'tel';
+    phone.placeholder = '0712345678';
+    phone.inputMode = 'tel';
+    phone.autocomplete = 'tel';
+    inner.appendChild(phone);
+    var pay = el('button', 'pay-btn', PAY_LABEL);
+    pay.type = 'button';
+    inner.appendChild(pay);
+    var msg = el('div', 'inline-msg');
+    inner.appendChild(msg);
+    panel.appendChild(inner);
+
+    wrap.appendChild(head);
+    wrap.appendChild(panel);
+
+    head.addEventListener('click', function () { toggle(wrap); });
+    pay.addEventListener('click', function () { submitVote(wrap, o.id, phone, pay, msg); });
+    return wrap;
+  }
+
+  function submitVote(wrap, optionId, phoneEl, btn, msg) {
+    var phone = phoneEl.value.trim();
+    if (!/^(07|01|254)\d{8,9}$/.test(phone.replace('+', ''))) {
+      return setInline(msg, 'Enter a valid M-Pesa number, e.g. 0712345678.', 'err');
+    }
+    btn.disabled = true;
+    btn.textContent = 'Sending M-Pesa prompt…';
+    setInline(msg, '');
+
+    function fail(text) {
+      btn.disabled = false;
+      btn.textContent = PAY_LABEL;
+      setInline(msg, text, 'err');
+    }
+
+    getJSON('/api/polls/' + enc(pollId) + '/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ optionId: optionId, phone_number: phone })
+    }).then(function (r) {
+      if (!r.ok) return fail(r.data.error || 'Could not start payment.');
+      setInline(msg, r.data.message || 'Check your phone and enter your M-Pesa PIN.');
+      btn.textContent = 'Waiting for payment…';
+      pollPayment(r.data.ref, wrap, btn, msg);
+    }).catch(function () { fail('Network error. Try again.'); });
+  }
+
+  function pollPayment(ref, wrap, btn, msg) {
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      getJSON('/api/polls/' + enc(pollId) + '/payment/' + enc(ref)).then(function (r) {
+        if (!r.ok) return;
+        if (r.data.status === 'paid') {
+          clearInterval(timer);
+          celebrate(wrap);
+        } else if (r.data.status === 'failed') {
+          clearInterval(timer);
+          btn.disabled = false;
+          btn.textContent = PAY_LABEL;
+          setInline(msg, 'Payment was cancelled or failed. No vote was counted.', 'err');
+        }
+      }).catch(function () {});
+      if (tries >= 40) { // about 2 minutes
+        clearInterval(timer);
+        btn.disabled = false;
+        btn.textContent = PAY_LABEL;
+        setInline(msg, 'Still waiting for M-Pesa confirmation. If you paid, your vote will count shortly.');
+      }
+    }, 3000);
+    timers.push(timer);
+  }
+
+  function celebrate(wrap) {
+    setBanner('Thank you! Your vote has been counted.');
+    closeAll(null);
+    wrap.querySelector('.phone').value = '';
+    var btn = wrap.querySelector('.pay-btn');
+    btn.disabled = false;
+    btn.textContent = PAY_LABEL;
+    setInline(wrap.querySelector('.inline-msg'), '');
+  }
+
+  function startCountdown() {
+    function tick() { $('countdown').textContent = countdownText(poll.closesAt); }
+    tick();
+    timers.push(setInterval(tick, 60000));
+  }
+
+  function renderVoting() {
+    $('title').textContent = poll.title;
+    $('desc').textContent = poll.description || '';
+    $('price').textContent = 'KSh ' + poll.votePriceKES;
+    $('closes').textContent = 'Voting closes ' + fmt(poll.closesAt) + ' (Nairobi time)';
+    var list = $('options');
+    list.innerHTML = '';
+    poll.options.forEach(function (o) { list.appendChild(buildOption(o)); });
+    show('voting', true);
+    startCountdown();
   }
 
   function showResults() {
-    getJSON('/api/polls/' + encodeURIComponent(pollId) + '/results').then(function (r) {
+    getJSON('/api/polls/' + enc(pollId) + '/results').then(function (r) {
       if (r.ok) {
         $('resultsTitle').textContent = r.data.title;
         var rows = $('resultRows');
         rows.innerHTML = '';
         r.data.results.forEach(function (x) {
-          var row = el('div', 'row');
+          var row = el('div', 'result-row');
           row.appendChild(el('span', '', x.name));
           row.appendChild(el('strong', '', String(x.votes)));
           rows.appendChild(row);
@@ -158,68 +390,20 @@
     });
   }
 
-  function pollPayment(ref) {
-    polling = true;
-    var tries = 0;
-    var timer = setInterval(function () {
-      tries++;
-      getJSON('/api/polls/' + encodeURIComponent(pollId) + '/payment/' + encodeURIComponent(ref))
-        .then(function (r) {
-          if (!r.ok) return;
-          if (r.data.status === 'paid') {
-            clearInterval(timer);
-            polling = false;
-            setMsg('Thank you! Your vote has been counted.', 'ok');
-            resetForm();
-          } else if (r.data.status === 'failed') {
-            clearInterval(timer);
-            polling = false;
-            setMsg('Payment was cancelled or failed. No vote was counted.', 'err');
-            $('payBtn').disabled = false;
-          }
-        }).catch(function () {});
-      if (tries >= 40) { // about 2 minutes
-        clearInterval(timer);
-        polling = false;
-        setMsg('Still waiting for M-Pesa confirmation. If you paid, your vote will count shortly.', '');
-        $('payBtn').disabled = false;
-      }
-    }, 3000);
-  }
-
-  function resetForm() {
-    selected = null;
-    document.querySelectorAll('.opt').forEach(function (x) { x.classList.remove('sel'); });
-    document.querySelectorAll('input[name=option]').forEach(function (x) { x.checked = false; });
-    $('payBtn').disabled = true;
-    $('phone').value = '';
-  }
-
-  $('payBtn').addEventListener('click', function () {
-    var phone = $('phone').value.trim();
-    if (selected == null) return setMsg('Choose who you want to vote for.', 'err');
-    if (!/^(07|01|254)\d{8,9}$/.test(phone.replace('+', ''))) return setMsg('Enter a valid M-Pesa number (e.g. 0712345678).', 'err');
-
-    var btn = $('payBtn');
-    btn.disabled = true;
-    setMsg('Sending M-Pesa prompt…');
-    getJSON('/api/polls/' + encodeURIComponent(pollId) + '/vote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ optionId: selected, phone_number: phone })
-    }).then(function (r) {
-      if (!r.ok) {
-        setMsg(r.data.error || 'Could not start payment.', 'err');
-        btn.disabled = false;
-        return;
-      }
-      setMsg(r.data.message || 'Check your phone and enter your M-Pesa PIN.');
-      pollPayment(r.data.ref);
+  function loadPoll() {
+    if (!pollId) { show('loading', false); show('notFound', true); return; }
+    getJSON('/api/polls/' + enc(pollId)).then(function (r) {
+      show('loading', false);
+      if (!r.ok) return show('notFound', true);
+      poll = r.data;
+      if (!poll.open) { $('closes').textContent = ''; return showResults(); }
+      renderVoting();
     }).catch(function () {
-      setMsg('Network error. Try again.', 'err');
-      btn.disabled = false;
+      show('loading', false);
+      $('loading').textContent = 'Could not load the poll. Check your connection and refresh.';
+      show('loading', true);
     });
-  });
+  }
 
   loadPoll();
 })();
