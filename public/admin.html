@@ -14,26 +14,30 @@
   .card { background: #fff; border: 1px solid #e2ede7; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
   label { display: block; font-size: 12px; font-weight: 600; color: #5a6e64; text-transform: uppercase; letter-spacing: .05em; margin: 14px 0 6px; }
   input, textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #e2ede7; border-radius: 9px; font-size: 14px; font-family: inherit; }
+  input:disabled { background: #f0f3f1; color: #8a9a92; }
   .opt-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
   button { padding: 11px 16px; border: none; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; background: #0f6e3f; color: #fff; }
+  button:disabled { opacity: .4; cursor: default; }
   button.ghost { background: #e6f9f0; color: #0f6e3f; }
   button.danger { background: #fdecea; color: #c62828; }
-  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  button.grey { background: #eceff1; color: #37474f; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
   .msg { font-size: 14px; margin-top: 10px; min-height: 18px; }
   .err { color: #c62828; } .ok { color: #0f6e3f; font-weight: 600; }
+  .note { font-size: 13px; color: #8a5a00; background: #fff6e0; border-radius: 9px; padding: 9px 12px; margin-top: 10px; display: none; }
   .poll { border-top: 1px solid #e2ede7; padding-top: 14px; margin-top: 14px; }
   .poll:first-child { border-top: none; padding-top: 0; margin-top: 0; }
   .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; margin-left: 8px; }
   .tag.open { background: #e6f9f0; color: #0f6e3f; } .tag.closed { background: #eceff1; color: #5a6e64; }
   .tally { font-size: 14px; margin-top: 8px; line-height: 1.7; }
-  .link { font-size: 13px; word-break: break-all; color: #0f6e3f; }
+  .link { font-size: 13px; word-break: break-all; color: #0f6e3f; margin-top: 4px; }
   .hidden { display: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Voting admin</h1>
-  <p class="muted" style="margin-bottom:16px">Only you can create polls. Results are shown to voters after the closing time; you can see live counts here.</p>
+  <p class="muted" style="margin-bottom:16px">Only you can create, edit or delete polls. Results are shown to voters after the closing time; you can see live counts here.</p>
 
   <div class="card" id="keyCard">
     <h2>Admin key</h2>
@@ -44,8 +48,8 @@
   </div>
 
   <div id="app" class="hidden">
-    <div class="card">
-      <h2>Create a poll</h2>
+    <div class="card" id="formCard">
+      <h2 id="formTitle">Create a poll</h2>
       <label for="title">Title</label>
       <input id="title" placeholder="Outstanding Headteacher/Principal of the Year 2026">
       <label for="desc">Description (optional)</label>
@@ -53,15 +57,20 @@
       <label>Options</label>
       <div id="opts"></div>
       <div class="row"><button class="ghost" id="addOpt">+ Add option</button></div>
+      <div class="note" id="optsNote">This poll already has paid votes, so its options are locked. You can still change the title, description and closing time.</div>
       <label for="closes">Closing time (optional, Nairobi time)</label>
       <input type="datetime-local" id="closes">
       <p class="muted" style="margin-top:6px">Leave blank to close at the default of 30 Nov 2026, 23:59 (Nairobi time).</p>
-      <div class="row"><button id="createBtn">Create poll</button></div>
+      <div class="row">
+        <button id="createBtn">Create poll</button>
+        <button class="grey hidden" id="cancelBtn">Cancel edit</button>
+      </div>
       <div id="createMsg" class="msg"></div>
     </div>
 
     <div class="card">
       <h2>Polls</h2>
+      <div id="pollsMsg" class="msg"></div>
       <div id="polls"><p class="muted">Loading…</p></div>
     </div>
   </div>
@@ -70,6 +79,10 @@
 <script>
 (function () {
   var KEY_NAME = 'vote_admin_key';
+  var editingId = null;
+  var lockOptions = false;
+  var pollsById = {};
+
   function $(id) { return document.getElementById(id); }
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -89,26 +102,77 @@
   function fmt(ms) {
     return new Date(ms).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short' });
   }
+  // Nairobi is UTC+3 with no daylight saving, so a fixed offset is safe
+  function msToLocalInput(ms) { return new Date(ms + 3 * 3600 * 1000).toISOString().slice(0, 16); }
+  function localInputToIso(v) { return v ? new Date(v + ':00+03:00').toISOString() : undefined; }
+
   function optRow(o) {
     var row = el('div', 'opt-row');
     var name = el('input'); name.placeholder = 'Name *'; name.className = 'o-name';
     var pos = el('input'); pos.placeholder = 'Position'; pos.className = 'o-pos';
     var county = el('input'); county.placeholder = 'County'; county.className = 'o-county';
-    if (o) { name.value = o.name; pos.value = o.position; county.value = o.county; }
+    if (o) { name.value = o.name; pos.value = o.position || ''; county.value = o.county || ''; }
     var rm = el('button', 'danger', '✕');
     rm.addEventListener('click', function () { row.remove(); });
+    [name, pos, county].forEach(function (i) { i.disabled = lockOptions; });
+    rm.disabled = lockOptions;
     row.appendChild(name); row.appendChild(pos); row.appendChild(county); row.appendChild(rm);
     return row;
   }
   function addOpt(o) { $('opts').appendChild(optRow(o)); }
+
+  function resetForm() {
+    editingId = null;
+    lockOptions = false;
+    $('formTitle').textContent = 'Create a poll';
+    $('createBtn').textContent = 'Create poll';
+    $('cancelBtn').classList.add('hidden');
+    $('optsNote').style.display = 'none';
+    $('addOpt').disabled = false;
+    $('title').value = ''; $('desc').value = ''; $('closes').value = '';
+    $('opts').innerHTML = ''; addOpt(); addOpt();
+  }
+
+  function startEdit(p) {
+    editingId = p.id;
+    lockOptions = p.totalVotes > 0;
+    $('formTitle').textContent = 'Edit poll';
+    $('createBtn').textContent = 'Save changes';
+    $('cancelBtn').classList.remove('hidden');
+    $('title').value = p.title;
+    $('desc').value = p.description || '';
+    $('closes').value = msToLocalInput(p.closesAt);
+    $('opts').innerHTML = '';
+    p.options.forEach(function (o) { addOpt(o); });
+    $('addOpt').disabled = lockOptions;
+    $('optsNote').style.display = lockOptions ? 'block' : 'none';
+    setMsg('createMsg', 'Editing "' + p.title + '"', '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function deletePoll(p) {
+    var msg = p.totalVotes > 0
+      ? 'Delete "' + p.title + '"?\n\nIt has ' + p.totalVotes + ' paid vote(s). Deleting removes them permanently.'
+      : 'Delete "' + p.title + '"?\n\nThis cannot be undone.';
+    if (!confirm(msg)) return;
+    var url = '/api/admin/polls/' + encodeURIComponent(p.id) + (p.totalVotes > 0 ? '?force=true' : '');
+    api(url, { method: 'DELETE' }).then(function (r) {
+      if (!r.ok) return setMsg('pollsMsg', r.data.error || 'Could not delete poll.', 'err');
+      if (editingId === p.id) resetForm();
+      setMsg('pollsMsg', 'Poll deleted.', 'ok');
+      loadPolls();
+    });
+  }
 
   function loadPolls() {
     api('/api/admin/polls').then(function (r) {
       var box = $('polls');
       if (!r.ok) { box.innerHTML = ''; box.appendChild(el('p', 'err', r.data.error || 'Could not load polls.')); return; }
       box.innerHTML = '';
+      pollsById = {};
       if (!r.data.polls.length) { box.appendChild(el('p', 'muted', 'No polls yet.')); return; }
       r.data.polls.forEach(function (p) {
+        pollsById[p.id] = p;
         var wrap = el('div', 'poll');
         var head = el('div');
         head.appendChild(el('strong', '', p.title));
@@ -118,16 +182,19 @@
         var link = location.origin + '/vote.html?id=' + encodeURIComponent(p.id);
         wrap.appendChild(el('div', 'link', link));
         var t = el('div', 'tally');
-        p.options.forEach(function (o) {
-          t.appendChild(el('div', '', o.name + ': ' + (p.tally[o.id] || 0)));
-        });
+        p.options.forEach(function (o) { t.appendChild(el('div', '', o.name + ': ' + (p.tally[o.id] || 0))); });
         wrap.appendChild(t);
+
         var row = el('div', 'row');
         var copy = el('button', 'ghost', 'Copy voter link');
         copy.addEventListener('click', function () {
           navigator.clipboard.writeText(link).then(function () { copy.textContent = 'Copied'; });
         });
-        row.appendChild(copy);
+        var edit = el('button', 'grey', 'Edit');
+        edit.addEventListener('click', function () { startEdit(pollsById[p.id]); });
+        var del = el('button', 'danger', 'Delete');
+        del.addEventListener('click', function () { deletePoll(pollsById[p.id]); });
+        row.appendChild(copy); row.appendChild(edit); row.appendChild(del);
         wrap.appendChild(row);
         box.appendChild(wrap);
       });
@@ -153,6 +220,7 @@
   });
 
   $('addOpt').addEventListener('click', function () { addOpt(); });
+  $('cancelBtn').addEventListener('click', function () { resetForm(); setMsg('createMsg', ''); });
 
   $('createBtn').addEventListener('click', function () {
     var options = [];
@@ -163,18 +231,40 @@
         county: row.querySelector('.o-county').value.trim()
       });
     });
-    var closes = $('closes').value ? new Date($('closes').value + ':00+03:00').toISOString() : undefined;
     var btn = $('createBtn');
     btn.disabled = true;
-    api('/api/admin/polls', {
-      method: 'POST',
-      body: JSON.stringify({ title: $('title').value.trim(), description: $('desc').value.trim(), options: options, closesAt: closes })
-    }).then(function (r) {
+
+    var request;
+    if (editingId) {
+      var body = {
+        title: $('title').value.trim(),
+        description: $('desc').value.trim(),
+        closesAt: localInputToIso($('closes').value) || pollsById[editingId].closesAt
+      };
+      if (!lockOptions) body.options = options;
+      request = api('/api/admin/polls/' + encodeURIComponent(editingId), { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      request = api('/api/admin/polls', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: $('title').value.trim(),
+          description: $('desc').value.trim(),
+          options: options,
+          closesAt: localInputToIso($('closes').value)
+        })
+      });
+    }
+
+    request.then(function (r) {
       btn.disabled = false;
-      if (!r.ok) return setMsg('createMsg', r.data.error || 'Could not create poll.', 'err');
-      setMsg('createMsg', 'Poll created. Link: ' + location.origin + '/vote.html?id=' + r.data.id, 'ok');
-      $('title').value = ''; $('desc').value = ''; $('closes').value = '';
-      $('opts').innerHTML = ''; addOpt(); addOpt();
+      if (!r.ok) return setMsg('createMsg', r.data.error || 'Could not save poll.', 'err');
+      if (editingId) {
+        setMsg('createMsg', 'Poll updated.', 'ok');
+        resetForm();
+      } else {
+        setMsg('createMsg', 'Poll created. Link: ' + location.origin + '/vote.html?id=' + r.data.id, 'ok');
+        resetForm();
+      }
       loadPolls();
     }).catch(function () { btn.disabled = false; setMsg('createMsg', 'Network error.', 'err'); });
   });
